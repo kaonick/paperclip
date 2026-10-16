@@ -65,6 +65,7 @@ describe("built-in runtime connection tool delivery", () => {
     ["acpx_local", "environment"],
     ["claude_local", "native_mcp"],
     ["codex_local", "native_mcp"],
+    ["copilot_local", "environment"],
     ["cursor_cloud", "invocation_context"],
     ["cursor", "environment"],
     ["gemini_local", "environment"],

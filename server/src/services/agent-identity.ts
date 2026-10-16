@@ -82,7 +82,7 @@ export function supportsManagedAgentIdentity(
       : [undefined, "codex", "opencode", "acpx"].includes(config?.provider as string | undefined);
   }
   return new Set([
-    "process", "claude_local", "codex_local", "cursor_cloud",
+    "process", "claude_local", "codex_local", "copilot_local", "cursor_cloud",
     "gemini_local", "grok_local", "hermes_local", "kimi_local", "opencode_local", "pi_local", "cursor",
   ]).has(adapterType);
 }

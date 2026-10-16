@@ -86,6 +86,11 @@ const adapterDisplayMap: Record<string, AdapterDisplayInfo> = {
     icon: Cpu,
     experimental: true,
   },
+  copilot_local: {
+    label: "GitHub Copilot",
+    description: "GitHub Copilot CLI harness",
+    icon: Bot,
+  },
   gemini_local: {
     label: "Gemini CLI",
     description: "Gemini CLI harness",
