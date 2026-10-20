@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { assertPublicRemoteHttpEndpoint } from "../services/remote-http-endpoint-guard.js";
 import { readRemoteConnectionFailure } from "../services/remote-connection-failure.js";
 
@@ -7,6 +7,23 @@ function guardError(message: string, code: string) {
 }
 
 describe("remote HTTP endpoint guard", () => {
+  it("skips local DNS for hostnames only in env-proxy mode, but still blocks localhost", async () => {
+    const lookup = async () => { throw Object.assign(new Error("no dns"), { code: "ENOTFOUND" }); };
+    await expect(assertPublicRemoteHttpEndpoint(new URL("https://api.example.test/mcp"), { lookup }, guardError))
+      .rejects.toMatchObject({ code: "remote_http_dns_failed" });
+    vi.stubEnv("PAPERCLIP_REMOTE_HTTP_VIA_ENV_PROXY", "true");
+    try {
+      await expect(assertPublicRemoteHttpEndpoint(new URL("https://api.example.test/mcp"), { lookup }, guardError))
+        .resolves.toBeUndefined();
+      await expect(assertPublicRemoteHttpEndpoint(new URL("http://app.localhost/mcp"), { lookup }, guardError))
+        .rejects.toMatchObject({ code: "remote_http_private_endpoint" });
+      await expect(assertPublicRemoteHttpEndpoint(new URL("http://127.0.0.1/mcp"), { lookup }, guardError))
+        .rejects.toMatchObject({ code: "remote_http_private_endpoint" });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it.each(["ENOTFOUND", "ENODATA", "EAI_AGAIN"])("retains proven DNS failure %s across the public wrapper", async (code) => {
     const failure = await assertPublicRemoteHttpEndpoint(new URL("https://missing.example.test/mcp"), {
       lookup: async () => { throw Object.assign(new Error("lookup failed"), { code }); },

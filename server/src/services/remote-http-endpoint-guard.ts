@@ -40,7 +40,36 @@ export async function assertPublicRemoteHttpEndpoint(
   options: RemoteHttpEndpointGuardOptions,
   error: RemoteHttpEndpointErrorFactory,
 ): Promise<void> {
+  if (usesEnvProxyForHostname(endpoint)) {
+    assertNotLocalHostname(endpoint, options, error);
+    return;
+  }
   await resolveApprovedRemoteHttpAddresses(endpoint, options, error);
+}
+
+/**
+ * Opt-in for hosts whose DNS and egress exist only behind a corporate proxy.
+ * Hostnames are then resolved by the proxy (platform fetch with
+ * NODE_USE_ENV_PROXY=1), so local DNS pinning and rebinding checks do not apply.
+ * IP literals, localhost and *.localhost keep the normal checks.
+ */
+export function remoteHttpViaEnvProxy(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.PAPERCLIP_REMOTE_HTTP_VIA_ENV_PROXY === "true";
+}
+
+export function usesEnvProxyForHostname(endpoint: URL): boolean {
+  return remoteHttpViaEnvProxy() && isIP(endpoint.hostname.replace(/^\[|\]$/g, "")) === 0;
+}
+
+export function assertNotLocalHostname(
+  endpoint: URL,
+  options: RemoteHttpEndpointGuardOptions,
+  error: RemoteHttpEndpointErrorFactory,
+): void {
+  const hostname = endpoint.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (!options.allowPrivateNetwork && (hostname === "localhost" || hostname.endsWith(".localhost"))) {
+    throw error("Remote MCP connection URL cannot target private or reserved network addresses", "remote_http_private_endpoint");
+  }
 }
 
 /**

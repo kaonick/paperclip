@@ -10,7 +10,9 @@ import {
   isAlwaysDeniedLinkLocalIp,
   isPrivateOrReservedIp,
   normalizeIpAddress,
+  assertNotLocalHostname,
   resolveApprovedRemoteHttpAddresses,
+  usesEnvProxyForHostname,
   type RemoteHttpEndpointErrorFactory,
   type RemoteHttpEndpointGuardOptions,
 } from "./remote-http-endpoint-guard.js";
@@ -97,9 +99,13 @@ export async function guardedRemoteHttpFetch(
   options: GuardedRemoteHttpFetchOptions,
 ): Promise<Response> {
   const endpoint = url instanceof URL ? url : new URL(url);
+  const platformFetch = options.unpinnedFetch ?? fetch;
+  if (usesEnvProxyForHostname(endpoint)) {
+    assertNotLocalHostname(endpoint, options, options.error);
+    return platformFetch(endpoint.toString(), { ...init, redirect: "manual" });
+  }
   const approved = await resolveApprovedRemoteHttpAddresses(endpoint, options, options.error);
   const literalHost = isIP(endpoint.hostname.replace(/^\[|\]$/g, "")) !== 0;
-  const platformFetch = options.unpinnedFetch ?? fetch;
   if (literalHost) {
     try {
       return await platformFetch(endpoint.toString(), { ...init, redirect: "manual" });
